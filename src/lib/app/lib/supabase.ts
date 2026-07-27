@@ -24,7 +24,7 @@ import type {
 } from './types';
 import { generateRandomString } from './helper_functions';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://localhost:54321';
+export const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://localhost:54321';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY || 'key';
 
 export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
