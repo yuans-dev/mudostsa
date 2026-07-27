@@ -1,6 +1,7 @@
 <script lang="ts">
 	import getStroke from 'perfect-freehand';
-	import { primaryButton, secondaryButton } from '$lib/app/lib/tailwindClasses';
+	import { onMount, onDestroy } from 'svelte';
+	import { secondaryButton } from '../lib/tailwindClasses';
 
 	let {
 		onSave,
@@ -14,9 +15,14 @@
 
 	type Point = [number, number, number];
 
+	const BASE_WIDTH = 600;
+	const BASE_HEIGHT = 300;
+
 	let canvas: HTMLCanvasElement;
 	let ctx: CanvasRenderingContext2D;
 	let svg: SVGSVGElement;
+
+	let resizeObserver: ResizeObserver;
 
 	let drawing = false;
 
@@ -33,39 +39,88 @@
 		end: { taper: 0, cap: true }
 	};
 
-	function getPoint(e: PointerEvent): Point {
-		const rect = canvas.getBoundingClientRect();
+	/* =======================================================
+		Canvas Helpers
+	======================================================= */
 
-		return [e.clientX - rect.left, e.clientY - rect.top, e.pressure || 0.5];
-	}
+	function resizeCanvas() {
+		if (!canvas) return;
 
-	function drawPreview() {
-		if (currentPoints.length < 2) return;
+		const ratio = window.devicePixelRatio || 1;
 
-		const stroke = getStroke(currentPoints, strokeOptions);
-		const path = getSvgPathFromStroke(stroke);
+		const width = canvas.clientWidth;
+		const height = canvas.clientHeight;
 
-		const p = new Path2D(path);
+		canvas.width = width * ratio;
+		canvas.height = height * ratio;
 
-		ctx.lineCap = 'round';
-		ctx.lineJoin = 'round';
+		ctx = canvas.getContext('2d')!;
+
+		// reset transform before applying DPI scale
+		ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
 
 		ctx.fillStyle = 'white';
 
-		ctx.fill(p);
+		redrawAll();
+	}
+
+	function getScale() {
+		return {
+			x: canvas.clientWidth / BASE_WIDTH,
+			y: canvas.clientHeight / BASE_HEIGHT
+		};
+	}
+
+	function getPoint(e: PointerEvent): Point {
+		const rect = canvas.getBoundingClientRect();
+
+		const { x: sx, y: sy } = getScale();
+
+		return [(e.clientX - rect.left) / sx, (e.clientY - rect.top) / sy, e.pressure || 0.5];
+	}
+
+	function scalePath(path: string) {
+		const { x: sx, y: sy } = getScale();
+
+		return new Path2D(
+			path.replace(
+				/(-?\d+\.?\d*) (-?\d+\.?\d*)/g,
+				(_, x, y) => `${Number(x) * sx} ${Number(y) * sy}`
+			)
+		);
 	}
 
 	function clearCanvas() {
-		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
 	}
+
+	/* =======================================================
+		Drawing
+	======================================================= */
 
 	function redrawAll() {
 		clearCanvas();
 
 		for (const d of strokes) {
-			const p = new Path2D(d);
-			ctx.fill(p);
+			ctx.fill(scalePath(d));
 		}
+	}
+
+	function drawPreview() {
+		if (currentPoints.length < 2) return;
+
+		const { x: sx, y: sy } = getScale();
+
+		const scaledPoints = currentPoints.map(([x, y, p]) => [x * sx, y * sy, p]);
+
+		const stroke = getStroke(scaledPoints, {
+			...strokeOptions,
+			size: strokeOptions.size * sx
+		});
+
+		const path = getSvgPathFromStroke(stroke);
+
+		ctx.fill(new Path2D(path));
 	}
 
 	function pointerDown(e: PointerEvent) {
@@ -85,8 +140,6 @@
 			currentPoints.push(getPoint(ev));
 		}
 
-		clearCanvas();
-
 		redrawAll();
 		drawPreview();
 	}
@@ -100,49 +153,52 @@
 
 		if (currentPoints.length > 1) {
 			const stroke = getStroke(currentPoints, strokeOptions);
-			const path = getSvgPathFromStroke(stroke);
 
-			strokes = [...strokes, path];
+			strokes = [...strokes, getSvgPathFromStroke(stroke)];
 		}
 
 		currentPoints = [];
 
-		clearCanvas();
 		redrawAll();
+
 		exportImage();
 	}
+
+	/* =======================================================
+		Actions
+	======================================================= */
 
 	function clear() {
 		strokes = [];
 		currentPoints = [];
 		clearCanvas();
+		exportImage();
 	}
+
 	function exportImage() {
 		const exportCanvas = document.createElement('canvas');
 		const exportCtx = exportCanvas.getContext('2d')!;
 
-		const ratio = window.devicePixelRatio || 1;
+		exportCanvas.width = BASE_WIDTH;
+		exportCanvas.height = BASE_HEIGHT;
 
-		exportCanvas.width = canvas.width;
-		exportCanvas.height = canvas.height;
-
-		exportCtx.scale(ratio, ratio);
-
-		// render all strokes in BLACK
 		exportCtx.fillStyle = 'black';
 
 		for (const d of strokes) {
-			const p = new Path2D(d);
-			exportCtx.fill(p);
+			exportCtx.fill(new Path2D(d));
 		}
 
-		const dataUrl = exportCanvas.toDataURL('image/png');
 		if (strokes.length === 0) {
 			onSave?.('');
 			return;
 		}
-		onSave?.(dataUrl);
+
+		onSave?.(exportCanvas.toDataURL('image/png'));
 	}
+
+	/* =======================================================
+		SVG
+	======================================================= */
 
 	function getSvgPathFromStroke(stroke: number[][]) {
 		if (!stroke.length) return '';
@@ -150,49 +206,60 @@
 		let d = `M ${stroke[0][0]} ${stroke[0][1]}`;
 
 		for (let i = 1; i < stroke.length; i++) {
-			const [x, y] = stroke[i];
-			d += ` L ${x} ${y}`;
+			d += ` L ${stroke[i][0]} ${stroke[i][1]}`;
 		}
 
 		return d + ' Z';
 	}
 
-	import { onMount } from 'svelte';
+	/* =======================================================
+		Lifecycle
+	======================================================= */
 
 	onMount(() => {
-		const ratio = window.devicePixelRatio || 1;
+		resizeCanvas();
 
-		canvas.width = 600 * ratio;
-		canvas.height = 300 * ratio;
+		resizeObserver = new ResizeObserver(() => {
+			resizeCanvas();
+		});
 
-		canvas.style.width = '600px';
-		canvas.style.height = '300px';
+		resizeObserver.observe(canvas);
 
-		ctx = canvas.getContext('2d')!;
-		ctx.scale(ratio, ratio);
-
-		ctx.fillStyle = 'white';
 		onClearRequested = clear;
+	});
+
+	onDestroy(() => {
+		resizeObserver?.disconnect();
 	});
 </script>
 
-<div class="flex flex-col items-center justify-center gap-12">
-	<div class="relative">
-		<!-- Canvas = LIVE DRAWING -->
-		<canvas
-			bind:this={canvas}
-			class="h-[300px] w-[600px] cursor-crosshair touch-none border-2 border-blue-400 bg-blue-950/50"
-			onpointerdown={pointerDown}
-			onpointermove={pointerMove}
-			onpointerup={pointerUp}
-			onpointerleave={pointerUp}
-		></canvas>
+<div class="flex w-full flex-col items-center justify-center gap-8">
+	<div class="w-full max-w-3xl">
+		<div class="relative aspect-[2/1] w-full">
+			<!-- Live Drawing Canvas -->
+			<canvas
+				bind:this={canvas}
+				class="absolute inset-0 h-full w-full cursor-crosshair touch-none border-2 border-blue-400 bg-blue-950/50"
+				onpointerdown={pointerDown}
+				onpointermove={pointerMove}
+				onpointerup={pointerUp}
+				onpointerleave={pointerUp}
+			></canvas>
 
-		<!-- SVG = FINAL VECTOR STORAGE (hidden but exportable) -->
-		<svg bind:this={svg} class="hidden">
-			{#each strokes as d}
-				<path {d} fill="white" />
-			{/each}
-		</svg>
+			<!-- Hidden SVG (stores vector paths) -->
+			<svg bind:this={svg} class="hidden" viewBox="0 0 600 300" xmlns="http://www.w3.org/2000/svg">
+				{#each strokes as d}
+					<path {d} fill="white" />
+				{/each}
+			</svg>
+		</div>
+	</div>
+
+	<div class="flex flex-wrap justify-center gap-3">
+		<button type="button" onclick={clear} class={secondaryButton}> Clear Signature </button>
+
+		{#if onCancel}
+			<button type="button" onclick={onCancel} class={secondaryButton}> Cancel </button>
+		{/if}
 	</div>
 </div>
