@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import ConfirmationDialog from '$lib/app/components/dialogs/ConfirmationDialog.svelte';
 	import InfoDialog from '$lib/app/components/dialogs/InfoDialog.svelte';
 	import FileUploadField from '$lib/app/components/FileUploadField.svelte';
@@ -95,7 +96,13 @@
 	}
 </script>
 
-<InfoDialog title="SPEF Submitted" bind:shown={submissionInfoShown}>
+<InfoDialog
+	onOk={() => {
+		goto(`/spef/view/${submissionReceipt}`);
+	}}
+	title="SPEF Submitted"
+	bind:shown={submissionInfoShown}
+>
 	<div class="flex flex-col gap-2">
 		<span
 			>{`Your initial SPEF has been successfully submitted. Please save the following submission receipt in the case that you need support:`}</span

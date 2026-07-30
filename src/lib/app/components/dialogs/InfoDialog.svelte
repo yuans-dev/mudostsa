@@ -4,11 +4,13 @@
 	let {
 		title,
 		children,
-		shown = $bindable(false)
+		shown = $bindable(false),
+		onOk
 	}: {
 		title: string;
 		children: any;
 		shown: boolean;
+		onOk?: () => any;
 	} = $props();
 </script>
 
@@ -19,6 +21,7 @@
 			<button
 				onclick={() => {
 					shown = false;
+					onOk?.();
 				}}
 				class={primaryButton}>OK</button
 			>
