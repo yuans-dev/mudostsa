@@ -9,7 +9,7 @@
 	let spefLink = $state('');
 	onMount(async () => {
 		if (data.submission.path) {
-			spefLink = await getSPEFLink(data.submission.path);
+			spefLink = await getSPEFLink(data.submission.signed_path ?? data.submission.path);
 		}
 	});
 </script>
