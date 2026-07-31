@@ -7,6 +7,7 @@
 	import { getTerm, submitInitialSPEF } from '$lib/app/lib/supabase';
 	import {
 		container,
+		fieldInput,
 		flexPrimaryButton,
 		formError,
 		innerContent
@@ -41,6 +42,8 @@
 	let submissionReceipt = $state('');
 	let file: File;
 	let missingFields: [string, any][] = $state([]);
+	let fileError = $state('');
+	let receivingEmail = $state('');
 	$effect(() => {
 		if (spef) {
 			missingFields = Object.entries(spef).filter(
@@ -52,17 +55,23 @@
 		}
 	});
 	async function handleFilesChange(files: File[]) {
-		if (files.length > 0) {
-			file = files[0];
-			const result = await extractDataFromPDF(file);
-			blobUrl = URL.createObjectURL(file);
-			if (!result.recentlyAttendedEvent) {
-				result.recentlyAttendedEvent = 'None';
+		fileError = '';
+		try {
+			if (files.length > 0) {
+				file = files[0];
+				const result = await extractDataFromPDF(file);
+				blobUrl = URL.createObjectURL(file);
+				if (!result.recentlyAttendedEvent) {
+					result.recentlyAttendedEvent = 'None';
+				}
+				spef = { ...result };
+			} else {
+				spef = null;
+				blobUrl = null;
 			}
-			spef = { ...result };
-		} else {
-			spef = null;
-			blobUrl = null;
+		} catch (e) {
+			fileError =
+				'File is not in the expected format. Make sure that the PDF you have uploaded is not a flattened PDF or a printed PDF.';
 		}
 	}
 
@@ -80,7 +89,7 @@
 						termRow.data,
 						{
 							fullName: spef.name ?? 'Unnamed',
-							email: spef.emailAddress ?? 'Unknown email address',
+							email: receivingEmail ?? 'Unknown email address',
 							studentNumber: spef.studentNumber ?? 'No student number',
 							programYear: spef.programYear ?? 'Unknown'
 						}
@@ -117,8 +126,11 @@
 		maxNumberOfFiles={1}
 		onFilesChange={handleFilesChange}
 	/>
+	{#if fileError}
+		<p class={formError}>{fileError}</p>
+	{/if}
 	<div
-		class={`${container} flex min-h-140 flex-col items-center justify-between gap-4 md:h-140 md:flex-row`}
+		class={`${container} flex min-h-140 flex-col items-center justify-between gap-4 md:h-180 md:flex-row`}
 	>
 		<div
 			class="flex h-full min-h-100 w-full items-center justify-center border-2 border-blue-400 bg-gradient-to-t from-blue-500/50 p-2 md:min-h-[0] md:w-1/3"
@@ -130,7 +142,7 @@
 			{/if}
 		</div>
 		<div class="flex h-full w-full flex-1 flex-col items-start justify-start overflow-hidden p-2">
-			<div class="flex w-full flex-1 items-start justify-start truncate">
+			<div class="flex w-full flex-1 items-start justify-start truncate overflow-auto">
 				{#if spef}
 					<div class="flex flex-col gap-2 text-white">
 						{#each Object.entries(spef) as [key, value]}
@@ -165,12 +177,26 @@
 				{#if submissionError}
 					<span class={formError}>{submissionError}</span>
 				{/if}
-				<button
-					onclick={handleSubmit}
-					class={flexPrimaryButton}
-					disabled={missingFields.length > 0 || processingSubmission}
-					>{processingSubmission ? 'Submitting' : 'Submit'}</button
-				>
+				<form onsubmit={handleSubmit} class="flex w-full flex-col">
+					<input
+						bind:value={receivingEmail}
+						required
+						type="email"
+						id="email"
+						class={fieldInput}
+						placeholder="Receiving email (Gmail)"
+					/>
+					<p class="mb-4 text-sm text-white">
+						* This email will be used as our primary means to contact you regarding your SPEF
+						submission. It is preferred that you include your Gmail address for a smoother process.
+					</p>
+					<button
+						type="submit"
+						class={flexPrimaryButton}
+						disabled={missingFields.length > 0 || processingSubmission || !spef}
+						>{processingSubmission ? 'Submitting' : 'Submit'}</button
+					>
+				</form>
 			</div>
 		</div>
 	</div>
