@@ -29,6 +29,7 @@
 		"vite": "^8.0.7"
 	},
 	"dependencies": {
+		"@lottiefiles/dotlottie-web": "^0.78.2",
 		"@supabase/supabase-js": "^2.110.6",
 		"pdf-lib": "^1.17.1",
 		"perfect-freehand": "^1.2.3",

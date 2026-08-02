@@ -9,7 +9,7 @@
 
 	let navItems = [
 		{ href: '/', label: 'Home' },
-		{ href: '/contact', label: 'Contact' },
+		{ href: '/spef', label: 'SPEF' },
 		{ href: '/app', label: 'App' },
 		{ href: '/resources', label: 'Resources' },
 		{ href: '/events', label: 'Events' }
