@@ -30,10 +30,10 @@
 	let strokes: string[] = $state([]);
 
 	const strokeOptions = {
-		size: 4,
+		size: 7,
 		thinning: 0.6,
-		smoothing: 1,
-		streamline: 1,
+		smoothing: 0.5,
+		streamline: 0.7,
 		easing: (t: number) => t,
 		start: { taper: 0, cap: true },
 		end: { taper: 0, cap: true }

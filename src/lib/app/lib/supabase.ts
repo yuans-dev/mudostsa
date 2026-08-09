@@ -407,3 +407,49 @@ export async function getSubmissionByReceipt(receipt: string) {
 		p_receipt: receipt
 	});
 }
+export async function submitApplication(
+	studentNumber: string,
+	name: string,
+	program: string,
+	year: number,
+	payment: File
+) {
+	//upload payment first
+	const { data: currentTenure } = await supabase.rpc('get_current_tenure');
+	const now = new Date();
+	const extension = payment.type.split('/')[1];
+	let paymentFilename = [
+		'payment',
+		'application',
+		studentNumber,
+		currentTenure.id,
+		now.valueOf()
+	].join('-');
+
+	const uploadResult = await supabase.storage
+		.from('payment_receipts')
+		.upload(`/${paymentFilename}.${extension}`, payment, { cacheControl: '3600', upsert: false });
+
+	if (uploadResult.error) {
+		throw uploadResult.error;
+	}
+
+	if (uploadResult.data.path) {
+		const path = uploadResult.data.path;
+		const receipt = `application-${generateRandomString(20)}-${now.valueOf()}`;
+		const applicationInsertResult = await supabase.from('membership_applications').insert({
+			name,
+			student_number: studentNumber,
+			program,
+			year,
+			for_tenure: currentTenure.id,
+			payment_path: path,
+			application_receipt: receipt
+		});
+		if (applicationInsertResult.error) {
+			throw applicationInsertResult.error;
+		} else {
+			return receipt;
+		}
+	}
+}

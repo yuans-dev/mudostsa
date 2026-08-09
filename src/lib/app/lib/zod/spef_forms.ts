@@ -7,6 +7,7 @@ export const initialSpefSchema = z.object({
 	programYear: z.string().min(1, 'Program and Year is required'),
 	emailAddress: z
 		.email()
+		.trim()
 		.endsWith('@mymail.mapua.edu.ph', {
 			message: 'Email must be a valid Mapúa email address'
 		})

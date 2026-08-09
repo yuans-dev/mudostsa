@@ -13,7 +13,7 @@
 			? `${page.data.title} | MU-DOST SA`
 			: "Mapúa University DOST Scholars' Association"}</title
 	>
-	<link rel="icon" href="/logo.svg" /></svelte:head
+	<link rel="icon" href="/favicon.ico" /></svelte:head
 >
 <div class="h-screen w-screen overflow-auto bg-[url('/bg.png')] bg-cover">
 	<NavigationBar></NavigationBar>

@@ -66,6 +66,7 @@
 	let signatureClearRequested: () => void = $state(() => {});
 	let signatureBase64 = $state('');
 	async function handleSubmit() {
+		error = '';
 		isSubmitting = true;
 		try {
 			const result = initialSpefSchema.safeParse(data);

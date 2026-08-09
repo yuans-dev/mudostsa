@@ -186,10 +186,12 @@
 						class={fieldInput}
 						placeholder="Receiving email (Gmail)"
 					/>
-					<p class="mb-4 text-sm text-white">
-						* This email will be used as our primary means to contact you regarding your SPEF
-						submission. It is preferred that you include your Gmail address for a smoother process.
+					<p class="mb-4 text-sm text-blue-200">
+						IMPORTANT: This email will be used as our primary means to contact you regarding your
+						SPEF submission. It is preferred that you include your Gmail address for a smoother
+						process.
 					</p>
+
 					<button
 						type="submit"
 						class={flexPrimaryButton}

@@ -6,7 +6,6 @@
 	import { fileTypeToMime, getFileType } from '$lib/app/lib/helper_functions';
 	import { fly } from 'svelte/transition';
 
-	const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 	const DEFAULT_ALLOWED_TYPES = [
 		'application/pdf',
 		'image/png',
@@ -24,15 +23,17 @@
 		allowedTypes = DEFAULT_ALLOWED_TYPES,
 		files = $bindable<File[]>([]),
 		maxNumberOfFiles = 99,
+		maxSizeMb = 10,
 		onFilesChange
 	}: {
 		message?: string;
 		allowedTypes?: string[];
 		files?: File[];
 		maxNumberOfFiles?: number;
+		maxSizeMb?: number;
 		onFilesChange?: (files: File[]) => void;
 	} = $props();
-
+	let MAX_FILE_SIZE = $derived(maxSizeMb * 1024 * 1024); // 10MB
 	let uploadError = $state('');
 	let isDragging = $state(false);
 
@@ -41,7 +42,7 @@
 			return `You can only upload up to ${maxNumberOfFiles} file(s)`;
 		}
 		if (file.size > MAX_FILE_SIZE) {
-			return `File "${file.name}" exceeds maximum size of 10MB`;
+			return `File "${file.name}" exceeds maximum size of ${maxSizeMb}MB`;
 		}
 
 		if (!allowedTypes.includes(file.type)) {
